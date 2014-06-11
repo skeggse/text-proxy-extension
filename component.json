@@ -1,0 +1,8 @@
+{
+  "name": "text-proxy",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "visionmedia/superagent": "^0.18.0"
+  }
+}

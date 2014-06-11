@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Text Proxy Options</title>
+</head>
+<body>
+  <h1>Text Proxy Options</h1>
+
+  <label for="socket-server"><a href="http://socket.io">Socket.IO</a> Server</label>
+  <input type="text" id="socket-server" placeholder="http://localhost:3000">
+
+  <label for="watch-name">Watch Name</label>
+  <input type="text" id="watch-name" placeholder="github-status">
+
+  <label for="watch-url">Watch Host</label>
+  <input type="text" id="watch-host" placeholder="status.github.com">
+
+  <label for="watch-title">Watch Title</label>
+  <input type="text" id="watch-title" placeholder="^.+$">
+
+  <label for="watch-title-sensitive">Watch Title Case Sensitive</label>
+  <input type="checkbox" id="watch-title-sensitive">
+
+  <label for="watch-selector">Watch Selector</label>
+  <input type="text" id="watch-selector" placeholder="#message">
+
+  <div id="status"></div>
+  <button id="save">Save</button>
+
+  <script src="options.js"></script>
+</body>
+</html>

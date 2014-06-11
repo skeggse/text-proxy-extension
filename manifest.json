@@ -1,0 +1,20 @@
+{
+  "name": "Text Proxy",
+  "version": "0.1.0",
+  "description": "Proxies text via socket.io",
+  "background": {
+    "persistent": false,
+    "scripts": [
+      "build/build.js",
+      "lib.js",
+      "background.js"
+    ]
+  },
+  "options_page": "options.html",
+  "permissions": [
+    "tabs",
+    "storage",
+    "*://*/*"
+  ],
+  "manifest_version": 2
+}
