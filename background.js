@@ -16,44 +16,54 @@ function deployTab(tab, options, callback) {
   });
 }
 
-function deployTabs(callback) {
+function deployTabs(tabs, options, callback) {
+  var deployed = 0, total = 0, matched = 0;
+  tabs.forEach(function(tab) {
+    var tabHost = parseURL(tab.url).host;
+    if (!options.host.test(tabHost) ||
+        !options.title.test(tab.title)) return;
+    matched++;
+    deployTab(tab.id, options, function(err) {
+      total++;
+      if (err) {
+        console.error(err, 'deploying scripts');
+      } else {
+        deployed++;
+      }
+      total === matched && callback(null, deployed, total);
+    });
+  });
+  // TODO: better tick defer?
+  matched || setTimeout(function() {
+    callback(null, 0, 0);
+  }, 0);
+}
+
+function optionsDeployTabs(tabs, callback) {
   loadOptions(function(err, options) {
     if (err) {
       return callback(err);
     }
-    chrome.tabs.query({
-      status: 'complete'//,
-      // TODO: will this work?
-      //title: options.watchTitle
-    }, function(tabs) {
-      if (chrome.runtime.lastError) {
-        return callback(chrome.runtime.lastError);
-      }
-      var deployed = 0, total = 0, matched = 0;
-      tabs.forEach(function(tab) {
-        var tabHost = parseURL(tab.url).host;
-        if (!options.host.test(tabHost) ||
-            !options.title.test(tab.title)) return;
-        matched++;
-        console.log('deploying to', tab);
-        deployTab(tab.id, options, function(err) {
-          total++;
-          if (err) {
-            console.error(err, 'deploying scripts');
-          } else {
-            deployed++;
-          }
-          total === matched && callback(null, deployed, total);
-        });
-      });
-      matched || callback(null, 0, 0);
-    });
+    deployTabs(tabs, options, callback);
+  });
+}
+
+function findDeployTabs(query, callback) {
+  if (typeof query === 'function') {
+    callback = query;
+    query = {status: 'complete'};
+  }
+  chrome.tabs.query(query, function(tabs) {
+    if (chrome.runtime.lastError) {
+      return callback(chrome.runtime.lastError);
+    }
+    optionsDeployTabs(tabs, callback);
   });
 }
 
 chrome.runtime.onInstalled.addListener(function(details) {
   var reason = details.reason;
-  deployTabs(function(err, count, total) {
+  findDeployTabs(function(err, count, total) {
     if (err) {
       return console.error(err, 'deploying scripts after runtime ' + reason);
     }
@@ -62,16 +72,38 @@ chrome.runtime.onInstalled.addListener(function(details) {
  });
 });
 
-chrome.tabs.onUpdated.addListener(function(id, info, tab) {
+function onTab(tab) {
   if (tab.status !== 'complete') return;
   loadOptions(function(err, options) {
     if (err) return;
     var tabHost = parseURL(tab.url).host;
     if (!options.host.test(tabHost) ||
         !options.title.test(tab.title)) return;
-    deployTab(id, options, function(err) {
+    deployTab(tab.id, options, function(err) {
       err && console.error(err, 'injecting scripts');
     });
+  });
+}
+
+chrome.tabs.onCreated.addListener(onTab);
+chrome.tabs.onUpdated.addListener(function(id, info, tab) {
+  return onTab(tab);
+});
+
+chrome.tabs.onReplaced.addListener(function(id) {
+  chrome.tabs.get(id, function(tab) {
+    if (chrome.runtime.lastError) {
+      return console.error(chrome.runtime.lastError, 'getting replaced tab');
+    }
+    onTab(tab);
+  });
+});
+
+chrome.windows.onCreated.addListener(function(window) {
+  findDeployTabs({
+    windowId: window.id
+  }, function(err) {
+    err && console.error(err, 'deploying tabs for window');
   });
 });
 
@@ -99,7 +131,7 @@ chrome.runtime.onMessage.addListener(function(req, sender, res) {
     });
   } else if (req.type === 'options') {
     // user updated options, redeploy content scripts
-    deployTabs(function(err, count, total) {
+    findDeployTabs(function(err, count, total) {
       if (err) {
         return console.error('deploying tabs after options change');
       }
